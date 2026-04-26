@@ -41,11 +41,13 @@ int main(int argc, char** argv){
     }
 
     if(SELF_TYPE == SENDER){
-        int socket = getSocketAsClient(DEST_ADDRESS,PORT_LOCAL,PORT_DEST);
-        for (int i = 0; i < 1000; ++i) {
-            char buf = '0' + (i % 10);
-            printf("writing %c\n",buf);
-            write(socket, &buf, sizeof(char));
+        int socket = getSocketAsClient(DEST_ADDRESS,PORT_DEST);
+        char buff[16];
+        bzero(buff, sizeof(buff));
+        while (1) {
+            int r = read(STDIN_FILENO,buff,sizeof(buff));
+            write(socket, buff, r);
+            bzero(buff, r);
         }
 
     } else {
@@ -57,7 +59,8 @@ int main(int argc, char** argv){
         for(int i = 0;; ++i){
             int n = read(socket_f, buff, sizeof(buff)-1);
             buff[n] = '\0';
-            if(n == 0){continue;}
+            if(buff[n-1] == '\n') buff[n-1] = '\0';
+            if(n <= 0){continue;}
             printf("recv[%d] \"%s\"\n",n,buff);            
         }
     }

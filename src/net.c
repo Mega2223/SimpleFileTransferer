@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "utils.h"
 
@@ -26,8 +27,8 @@ int getSocketAsServer(char* ip_addr, int port){
 
     if(bind_err != 0){
         const char* errmsg = "Socket binding error";
-        write(STDERR_FILENO,errmsg,strlen(errmsg));
-        return -1;
+        err(errmsg);
+        exit(-1);
     }
 
     listen(sock,1);
@@ -39,7 +40,7 @@ int getSocketAsServer(char* ip_addr, int port){
     return sock;
 }
 
-int getSocketAsClient(char* server_addr, int self_port, int server_port){
+int getSocketAsClient(char* server_addr, int server_port){
     struct sockaddr_in self, server;
 
     int sock = socket(AF_INET,SOCK_STREAM,0);
