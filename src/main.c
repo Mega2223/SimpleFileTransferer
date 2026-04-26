@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <strings.h>
 #include <unistd.h>
 #include <string.h>
@@ -16,8 +17,7 @@
 // - Pensando alto: uma fila, caso o receptor não esteja online, guarde a requisição no chache
 // e mande quando ele esteja, pensando ainda mais alto, seria ideal isso ser um serviço
 
-unsigned int PORT_LOCAL = 2000;
-unsigned int PORT_DEST = 2000;
+unsigned int PORT_SERVER = 2000;
 
 char* DEST_ADDRESS = "127.0.0.1";
 
@@ -38,10 +38,13 @@ int main(int argc, char** argv){
         if(strcmp(argv[a],"--ip") == 0){
             DEST_ADDRESS = argv[++a];
         }
+        if(strcmp(argv[a],"--port") == 0){
+            PORT_SERVER = atoi(argv[++a]);
+        }
     }
 
     if(SELF_TYPE == SENDER){
-        int socket = getSocketAsClient(DEST_ADDRESS,PORT_DEST);
+        int socket = getSocketAsClient(DEST_ADDRESS,PORT_SERVER);
         char buff[16];
         bzero(buff, sizeof(buff));
         while (1) {
@@ -52,7 +55,7 @@ int main(int argc, char** argv){
 
     } else {
         printf("Will listen\n");
-        int socket_f = getSocketAsServer(DEST_ADDRESS, PORT_DEST);
+        int socket_f = getSocketAsServer(DEST_ADDRESS, PORT_SERVER);
         char buff[128];
         bzero(buff, sizeof(buff));
 
