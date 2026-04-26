@@ -54,7 +54,7 @@ int main(int argc, char** argv){
         }
 
     } else {
-        printf("Will listen\n");
+        printf("Will listen at ip %s at port %d\n",DEST_ADDRESS,PORT_SERVER);
         int socket_f = getSocketAsServer(DEST_ADDRESS, PORT_SERVER);
         char buff[128];
         bzero(buff, sizeof(buff));
