@@ -18,7 +18,7 @@ int getSocketAsServer(char* ip_addr, int port){
     int sock = socket(AF_INET,SOCK_STREAM,0);
 
     self.sin_family = AF_INET;
-    self.sin_port = port;
+    self.sin_port = htons(port);
     self.sin_addr.s_addr = INADDR_ANY;
 
     int bind_err = bind(sock,
@@ -45,8 +45,13 @@ int getSocketAsClient(char* server_addr, int server_port){
 
     int sock = socket(AF_INET,SOCK_STREAM,0);
 
+    if(sock < 0){
+        printf("Error creating isocket");
+        exit(-1);
+    }
+
     server.sin_family = AF_INET;
-    server.sin_port = server_port;
+    server.sin_port = htons(server_port);
     server.sin_addr.s_addr = inet_addr(server_addr);
     printf("Sending to %s\n",server_addr);
 
