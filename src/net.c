@@ -53,7 +53,7 @@ int getSocketAsClient(char* server_addr, int server_port){
     server.sin_family = AF_INET;
     server.sin_port = htons(server_port);
     server.sin_addr.s_addr = inet_addr(server_addr);
-    printf("Sending to %s\n",server_addr);
+    printf("Sending to %s with port %d\n",server_addr,server_port);
 
     int con_err = connect(sock, (struct sockaddr *) &server, sizeof server);
 
