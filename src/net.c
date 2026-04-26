@@ -19,7 +19,7 @@ int getSocketAsServer(char* ip_addr, int port){
 
     self.sin_family = AF_INET;
     self.sin_port = port;
-    self.sin_addr.s_addr = inet_addr("127.0.0.1");
+    self.sin_addr.s_addr = INADDR_ANY;
 
     int bind_err = bind(sock,
         (const struct sockaddr *)(&self),
@@ -31,7 +31,7 @@ int getSocketAsServer(char* ip_addr, int port){
         exit(-1);
     }
 
-    listen(sock,1);
+    listen(sock,10);
     unsigned int c_size = sizeof(dest);
     sock = accept(sock, (struct sockaddr*) &dest ,&c_size);
 
@@ -56,6 +56,7 @@ int getSocketAsClient(char* server_addr, int server_port){
         err("Connection error\n");
         return -1;
     }
+    printf("Connected\n");
 
     return sock;
 }
