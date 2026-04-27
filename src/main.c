@@ -96,6 +96,8 @@ int main(int argc, char **argv) {
             if (n == 0 || n < 0 || errno) {
                 if (gotSigPipe) {
                     printf("Got piped\n");
+                    int w = 0;
+                    write(n,&w,sizeof(int));
                     break;
                 }
                 printf("errno=%d\n",errno);
