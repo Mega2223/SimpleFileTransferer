@@ -1,1 +1,9 @@
-i=1; while pidof main.out; do export i=3; echo 2; pkill -2 main.out; pidof main.out; sleep 1; done
+i=0;
+
+while pidof main.out; do
+    export i=$($i + 1)
+    echo $i
+    pkill -$i main.out
+    pidof main.out
+    sleep 1
+done

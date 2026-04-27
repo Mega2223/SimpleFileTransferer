@@ -66,4 +66,8 @@ int getSocketAsClient(char* server_addr, int server_port){
     return sock;
 }
 
+void closeSock(int fn) {
+    close(fn);
+}
+
 #endif
