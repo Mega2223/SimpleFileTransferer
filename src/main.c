@@ -99,9 +99,8 @@ int main(int argc, char **argv) {
                     break;
                 }
                 char w = '1';
-                write(n,&w,sizeof(w));
+                write(socket,&w,sizeof(w));
                 printf("errno=%dsigpipe=%d\n", errno, gotSigPipe);
-                break;
             }
             printf("recv %d bytes\n", n);
             if (((char*)rec_buffer)[0] == '\0' && n == 0) {
