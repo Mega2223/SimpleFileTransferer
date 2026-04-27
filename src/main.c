@@ -98,12 +98,13 @@ int main(int argc, char **argv) {
                     printf("Got piped\n");
                     break;
                 }
-                int w = '0';
-                write(n,&w,sizeof(int));
-                printf("errno=%d\n",errno);
+                char w = '1';
+                write(n,&w,sizeof(w));
+                printf("errno=%dsigpipe=%d\n", errno, gotSigPipe);
+                break;
             }
             printf("recv %d bytes\n", n);
-            if (((int*)rec_buffer)[0] == 0 && n == 0) {
+            if (((char*)rec_buffer)[0] == '\0' && n == 0) {
                 printf("got an EOF\n");
                 break;
             }
