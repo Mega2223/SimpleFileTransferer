@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
 
         int n = 1;
         while (!gotSigPipe) {
-            int n = read(socket, rec_buffer, sizeof(char));
+            int n = read(socket, rec_buffer, 2048);
             if (n == 0 || n < 0 || errno) {
                 if (gotSigPipe) {
                     printf("Got piped\n");
