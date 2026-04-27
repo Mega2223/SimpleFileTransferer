@@ -65,22 +65,17 @@ int main(int argc, char **argv) {
         if (socket <= 0) {
             return -1;
         }
-        FILE* f = fopen(fileName,"rb");
+        // FILE* f = fopen(fileName,"rb");
+        int fno = open(fileName,O_RDONLY);
         
         char send_buffer[32];
         bzero(send_buffer, sizeof(send_buffer));
 
         int n = 1;
-        while (n > 0) {
-            n = read(f->_fileno, send_buffer, sizeof(send_buffer)-1);
-            // n = fread(send_buffer, sizeof(send_buffer), 1, f);
+        while (n > 0 && !gotSigPipe) {
+            n = read(fno, send_buffer, sizeof(send_buffer));
             printf("Read %d bytes: \"%s\"\n", n, send_buffer);
             write(socket, send_buffer, n);
-            if (send_buffer[n - 1] == '\0') {
-                // printf("EOF detected\n");
-                // Redundante, em tese o EOF do arquivo vai junto, mas vai que
-                write(0,send_buffer,sizeof(int));
-            }
             bzero(send_buffer, sizeof(send_buffer));
         }
         closeSock(socket);
@@ -92,12 +87,12 @@ int main(int argc, char **argv) {
         int socket = getSocketAsServer(DEST_ADDRESS, PORT_SERVER);
         int file_to_write = open(fileName,O_CREAT | O_RDWR | O_TRUNC, S_IRWXU);
             
-        char* rec_buffer = malloc(sizeof(char));
-        bzero(rec_buffer, sizeof(char));
+        void* rec_buffer = malloc(2048);
+        bzero(rec_buffer, 2048);
 
         int n = 1;
         while (!gotSigPipe) {
-            int n = read(socket, rec_buffer, sizeof(char));
+            int n = read(socket, rec_buffer, 2048);
             if (n == 0 || n < 0 || errno) {
                 if (gotSigPipe) {
                     printf("Got piped\n");
@@ -105,8 +100,8 @@ int main(int argc, char **argv) {
                 }
                 printf("errno=%d\n",errno);
             }
-            printf("recv %d bytes %c\n", n, rec_buffer[0]);
-            if (rec_buffer[0] == 0) {
+            printf("recv %d bytes\n", n);
+            if (((int*)rec_buffer)[0] == 0 && n == 0) {
                 printf("got an EOF\n");
                 break;
             }
@@ -114,7 +109,8 @@ int main(int argc, char **argv) {
             bzero(rec_buffer, sizeof(char));
         }
         close(file_to_write);
-        // free(rec_buffer);
+        closeSock(socket);
+        free(rec_buffer);
     }
     printf("bye");
     return 0;
