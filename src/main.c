@@ -86,8 +86,12 @@ int main(int argc, char **argv) {
         closeSock(socket);
 
     } else {
-        printf("Will listen at ip %s at port %d\n",DEST_ADDRESS,PORT_SERVER);
+        printf("Will listen at ip %s at port %d\n", DEST_ADDRESS, PORT_SERVER);
+        printf("Writing data to %s\n", fileName);
+        
         int socket = getSocketAsServer(DEST_ADDRESS, PORT_SERVER);
+        int file_to_write = open(fileName,O_CREAT | O_RDWR | O_TRUNC, S_IRWXU);
+            
         char* rec_buffer = malloc(sizeof(char));
         bzero(rec_buffer, sizeof(char));
 
@@ -106,8 +110,10 @@ int main(int argc, char **argv) {
                 printf("got an EOF\n");
                 break;
             }
+            write(file_to_write,rec_buffer,n);
             bzero(rec_buffer, sizeof(char));
         }
+        close(file_to_write);
         // free(rec_buffer);
     }
     printf("bye");
