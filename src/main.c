@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
                     printf("Got piped\n");
                     break;
                 }
-                int w = 0;
+                int w = '0';
                 write(n,&w,sizeof(int));
                 printf("errno=%d\n",errno);
             }
