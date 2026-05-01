@@ -9,6 +9,7 @@
 
 #include "net.h"
 #include "utils.h"
+#include "file.h"
 
 // TODO:
 // - Configurações para predefinir a aplicação
@@ -26,6 +27,7 @@ char* DEST_ADDRESS = "127.0.0.1";
 typedef enum APP_TYPE { RECEIVER = 0, SENDER = 1 } APP_TYPE;
 
 #define MAX_FILENAME_LEN 256
+#define BUFFER_LEN 2048
 
 char fileName[MAX_FILENAME_LEN];
 
@@ -59,6 +61,10 @@ int main(int argc, char **argv) {
         }
     }
 
+    int devn = open("/dev/null",O_RDWR);
+    sendDir(devn, "src");
+    exit(0);
+
     if(SELF_TYPE == SENDER){
         printf("Sending file %s to host %s:%d\n",fileName,DEST_ADDRESS,PORT_SERVER);
         int socket = getSocketAsClient(DEST_ADDRESS, PORT_SERVER);
@@ -87,12 +93,12 @@ int main(int argc, char **argv) {
         int socket = getSocketAsServer(DEST_ADDRESS, PORT_SERVER);
         int file_to_write = open(fileName,O_CREAT | O_RDWR | O_TRUNC, S_IRWXU);
             
-        void* rec_buffer = malloc(2048);
-        bzero(rec_buffer, 2048);
+        void* rec_buffer = malloc(BUFFER_LEN);
+        bzero(rec_buffer, BUFFER_LEN);
 
         int n = 1;
         while (!gotSigPipe) {
-            int n = read(socket, rec_buffer, 2048);
+            int n = read(socket, rec_buffer, BUFFER_LEN);
             if (n == 0 || n < 0 || errno) {
                 if (gotSigPipe) {
                     printf("Got piped\n");
