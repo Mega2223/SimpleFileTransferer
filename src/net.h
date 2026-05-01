@@ -7,4 +7,6 @@ int getSocketAsClient(char *server_addr, int server_port);
 
 void closeSock(int fn);
 
+void sendHeader(int stream_fileno, const char* dir_path);
+
 #endif

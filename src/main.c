@@ -61,8 +61,11 @@ int main(int argc, char **argv) {
         }
     }
 
-    int devn = open("/dev/null",O_RDWR);
-    sendDir(devn, "src");
+    int devn = open("teste2.txt", O_RDWR);
+    // write(devn, "teste123\n", strlen("teste123\n"));
+    sendHeader(devn, ".");
+    // sendDir(devn, "src");
+    close(devn);
     exit(0);
 
     if(SELF_TYPE == SENDER){
