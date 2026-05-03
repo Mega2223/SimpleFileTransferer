@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
             DEST_ADDRESS = argv[++a];
         }
         if(strcmp(argv[a],"--port") == 0){
-            PORT_SERVER = atoi(argv[++a]);
+            PORT_SERVER = (unsigned int) atoi(argv[++a]);
         }
         if (strcmp(argv[a], "--file") == 0) {
             if (strlen(argv[a+1]) > MAX_FILENAME_LEN) {
@@ -61,9 +61,9 @@ int main(int argc, char **argv) {
         }
     }
 
-    int devn = open("teste2.txt", O_RDWR);
+    int devn = open(".test/out.txt", O_RDWR);
     // write(devn, "teste123\n", strlen("teste123\n"));
-    sendHeader(devn, ".");
+    sendDirectory(devn, ".");
     // sendDir(devn, "src");
     close(devn);
     exit(0);

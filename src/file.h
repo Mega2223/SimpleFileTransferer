@@ -3,9 +3,7 @@
 
 #include <stdlib.h>
 
-void sendFile(int stream_fileno, const char* file_path);
-void sendDir(int stream_fileno, const char* dir_path);
-
-// void printFileChain(known_file* first);
+void sendFile(int stream_fileno, const char* file_path, int n_bytes);
+void sendDirectory(int stream_fileno, const char* dir_path);
 
 #endif
