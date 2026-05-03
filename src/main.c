@@ -61,6 +61,10 @@ int main(int argc, char **argv) {
         }
     }
 
+    // int stream = open(".test/teste.txt", O_RDWR | O_CREAT);
+    // sendDirectory(stream, ".");
+    // exit(0);
+
     if(SELF_TYPE == SENDER){
         printf("Sending file %s to host %s:%d\n",fileName,DEST_ADDRESS,PORT_SERVER);
         int socket = getSocketAsClient(DEST_ADDRESS, PORT_SERVER);
@@ -71,38 +75,40 @@ int main(int argc, char **argv) {
         closeSock(socket);
     } else {
         printf("Will listen at ip %s at port %d\n", DEST_ADDRESS, PORT_SERVER);
-        printf("Writing data to %s\n", fileName);
+        // printf("Writing data to %s\n", fileName);
         
         int socket = getSocketAsServer(DEST_ADDRESS, PORT_SERVER);
-        int file_to_write = open(fileName,O_CREAT | O_RDWR | O_TRUNC, S_IRWXU);
-            
-        void* rec_buffer = malloc(BUFFER_LEN);
-        bzero(rec_buffer, BUFFER_LEN);
+        // int file_to_write = open(fileName,O_CREAT | O_RDWR | O_TRUNC, S_IRWXU);
 
-        int n = 1;
-        while (!gotSigPipe) {
-            int n = read(socket, rec_buffer, BUFFER_LEN);
-            if (n == 0 || n < 0 || errno) {
-                if (gotSigPipe) {
-                    printf("Got piped\n");
-                    break;
-                }
-                char w = '1';
-                write(n,&w,sizeof(w));
-                printf("errno=%dsigpipe=%d\n", errno, gotSigPipe);
-                break;
-            }
-            printf("recv %d bytes\n", n);
-            if (((char*)rec_buffer)[0] == '\0' && n == 0) {
-                printf("got an EOF\n");
-                break;
-            }
-            write(file_to_write,rec_buffer,n);
-            bzero(rec_buffer, sizeof(char));
-        }
-        close(file_to_write);
-        closeSock(socket);
-        free(rec_buffer);
+        recDirectory(socket);
+        
+        // void* rec_buffer = malloc(BUFFER_LEN);
+        // bzero(rec_buffer, BUFFER_LEN);
+
+        // int n = 1;
+        // while (!gotSigPipe) {
+        //     int n = read(socket, rec_buffer, BUFFER_LEN);
+        //     if (n == 0 || n < 0 || errno) {
+        //         if (gotSigPipe) {
+        //             printf("Got piped\n");
+        //             break;
+        //         }
+        //         char w = '1';
+        //         write(n,&w,sizeof(w));
+        //         printf("errno=%dsigpipe=%d\n", errno, gotSigPipe);
+        //         break;
+        //     }
+        //     printf("recv %d bytes\n", n);
+        //     if (((char*)rec_buffer)[0] == '\0' && n == 0) {
+        //         printf("got an EOF\n");
+        //         break;
+        //     }
+        //     write(file_to_write,rec_buffer,n);
+        //     bzero(rec_buffer, sizeof(char));
+        // }
+        // close(file_to_write);
+        // closeSock(socket);
+        // free(rec_buffer);
     }
     printf("bye");
     return 0;

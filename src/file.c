@@ -84,7 +84,12 @@ void receiveFile(int r_stream_fileno, char* file_path, int bytes)
     while (bytes) {
         bzero(rec_buffer, sizeof(char));
         int n = read(r_stream_fileno, rec_buffer,
-            bytes < SEND_BUFFER_SIZE ? SEND_BUFFER_SIZE : bytes);
+            bytes > SEND_BUFFER_SIZE ? SEND_BUFFER_SIZE : bytes);
+
+        printf("Reading \"%s\", [%d] bytes remaining.\n", file_path, bytes);
+        printf("Read [%d] bytes from a possible [%d].\n", n, bytes > SEND_BUFFER_SIZE ? SEND_BUFFER_SIZE : bytes);
+
+
         // if (n == 0 || n < 0 || errno) {
             // if (gotSigPipe) {
             //     printf("Got piped\n");
@@ -210,6 +215,7 @@ trans_header* recHeader(int read_stream)
         cur = next;
     }
     ret->files = first;
+    printHeader(ret);
     return ret;
 }
 
@@ -218,7 +224,7 @@ void sendDirectory(int stream_fileno, const char* dir_path)
     trans_header* header = malloc(sizeof(trans_header));
     known_file* first = malloc(sizeof(known_file));
     known_file* k_file = first;
-    first->file_size = 0;
+    first->file_size = 0; first->fname = NULL;
 
     int n_files = 0.;
     getAllFiles(dir_path, k_file);
@@ -230,6 +236,13 @@ void sendDirectory(int stream_fileno, const char* dir_path)
     header->files = first;
 
     sendHeader(stream_fileno, header);
+    printHeader(header);
+
+    k_file = first;
+    while (k_file->file_size > 0) {
+        sendFile(stream_fileno, k_file->fname, k_file->file_size);
+        k_file = k_file->next;
+    }
 }
 
 void recDirectory(int read_stream)
@@ -239,6 +252,16 @@ void recDirectory(int read_stream)
     while (act->fname != NULL) {
         receiveFile(read_stream, act->fname, act->file_size);
         act = act->next;
+    }
+}
+
+void printHeader(trans_header* header)
+{
+    printf("Header: Files[%d]\n", header->n_files);
+    known_file* cur = header->files;
+    while (cur->fname != NULL) {
+        printf("File[%ld] %s\n",cur->file_size,cur->fname);
+        cur = cur->next;
     }
 }
 
