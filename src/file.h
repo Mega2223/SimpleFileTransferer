@@ -15,4 +15,6 @@ void receiveFile(int r_stream_fileno, char* file_path, int bytes);
 
 void printHeader(trans_header* header);
 
+void ensureHasPath(char* file_path);
+
 #endif

@@ -7,4 +7,4 @@ build:
 
 debug:
 	mkdir bin  >> /dev/null || true
-	gcc $w -g3 -o ./bin/debug.out
+	gcc -Wall $w -g3 -o ./bin/debug.out

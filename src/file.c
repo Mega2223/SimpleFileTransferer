@@ -2,6 +2,7 @@
 #define FILE_C
 
 #include "file.h"
+#include <asm-generic/errno-base.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -76,6 +77,23 @@ void sendFile(int stream_fileno, const char* file_path, int n_bytes)
     close(fno);
 }
 
+void ensureHasPath(char* file_path)
+{
+    printf("Ensuring path for %s\n", file_path);
+    for (int i = 0; file_path[i] != '\0'; i++) {
+        // printf("i=%d[%c]\n",i,file_path[i]);
+        if (file_path[i] == '/') {
+            file_path[i] = '\0';
+            int res = mkdir(file_path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+            if (res == -1 && errno == EEXIST) {
+                printf("Already exists\n");
+            }
+            ensureHasPath(file_path);
+            file_path[i] = '/';
+        }
+    }
+}
+
 void receiveFile(int r_stream_fileno, char* file_path, int bytes)
 {
     int fstream = open(file_path, O_RDWR);
@@ -86,9 +104,8 @@ void receiveFile(int r_stream_fileno, char* file_path, int bytes)
         int n = read(r_stream_fileno, rec_buffer,
             bytes > SEND_BUFFER_SIZE ? SEND_BUFFER_SIZE : bytes);
 
-        printf("Reading \"%s\", [%d] bytes remaining.\n", file_path, bytes);
-        printf("Read [%d] bytes from a possible [%d].\n", n, bytes > SEND_BUFFER_SIZE ? SEND_BUFFER_SIZE : bytes);
-
+        // printf("Reading \"%s\", [%d] bytes remaining.\n", file_path, bytes);
+        // printf("Read [%d] bytes from a possible [%d].\n", n, bytes > SEND_BUFFER_SIZE ? SEND_BUFFER_SIZE : bytes);
 
         // if (n == 0 || n < 0 || errno) {
             // if (gotSigPipe) {
@@ -99,7 +116,7 @@ void receiveFile(int r_stream_fileno, char* file_path, int bytes)
             // write(n,&w,sizeof(w));
             // break;
         // }
-        printf("recv %d bytes\n", n);
+        // printf("recv %d bytes\n", n);
         if (((char*)rec_buffer)[0] == '\0' && n == 0) {
             printf("got an EOF\n");
             break;

@@ -60,10 +60,14 @@ int main(int argc, char **argv) {
             strcpy(fileName, argv[++a]);
         }
     }
+    char g[] = "teste1/teste2/teste3/arquivo.txt";
+    ensureHasPath(g);
 
     // int stream = open(".test/teste.txt", O_RDWR | O_CREAT);
-    // sendDirectory(stream, ".");
-    // exit(0);
+    int hg = open("teste123", O_DIRECTORY | O_CREAT | O_RDWR, S_IRWXU);
+    printf("t %d",hg);
+    close(hg);
+    exit(0);
 
     if(SELF_TYPE == SENDER){
         printf("Sending file %s to host %s:%d\n",fileName,DEST_ADDRESS,PORT_SERVER);
