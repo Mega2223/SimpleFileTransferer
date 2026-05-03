@@ -57,9 +57,7 @@ void sendFile(int stream_fileno, const char* file_path, int n_bytes)
     }
     
     int fno = open(file_path,O_RDONLY);
-        
     char send_buffer[SEND_BUFFER_SIZE];
-
     int sent = 0;
 
     ssize_t n = 1;
@@ -76,6 +74,35 @@ void sendFile(int stream_fileno, const char* file_path, int n_bytes)
     }
 	printf("[%s] read %d bytes, %d expected\n",file_path,sent,n_bytes);
     close(fno);
+}
+
+void receiveFile(int r_stream_fileno, char* file_path, int bytes)
+{
+    int fstream = open(file_path, O_RDWR);
+    char rec_buffer[SEND_BUFFER_SIZE];
+    int r = 1;
+    while (bytes) {
+        bzero(rec_buffer, sizeof(char));
+        int n = read(r_stream_fileno, rec_buffer,
+            bytes < SEND_BUFFER_SIZE ? SEND_BUFFER_SIZE : bytes);
+        // if (n == 0 || n < 0 || errno) {
+            // if (gotSigPipe) {
+            //     printf("Got piped\n");
+            //     break;
+            // }
+            // char w = '1';
+            // write(n,&w,sizeof(w));
+            // break;
+        // }
+        printf("recv %d bytes\n", n);
+        if (((char*)rec_buffer)[0] == '\0' && n == 0) {
+            printf("got an EOF\n");
+            break;
+        }
+        write(fstream, rec_buffer, n);
+        bytes -= n;
+    }
+    close(fstream);
 }
 
 int getAllFiles(const char* f_path, known_file* next_file)
@@ -136,18 +163,83 @@ void printFileChain(known_file* first)
     printf("\n");
 }
 
+void sendFileHeader(int stream_fileno, known_file* k_file)
+{
+    int name_len = strlen(k_file->fname);
+    write(stream_fileno, &k_file->file_size, sizeof(long));
+    write(stream_fileno, &name_len, sizeof(int));
+    write(stream_fileno, k_file->fname, name_len);
+}
+
+void recFileHeader(int read_stream, known_file* dest)
+{
+    long f_size; int name_len;
+    read(read_stream, &f_size, sizeof(long));
+    read(read_stream, &name_len, sizeof(int));
+    char* name_buffer = malloc(name_len + 1);
+    read(read_stream, name_buffer, name_len);
+    name_buffer[name_len] = '\0';
+    dest->fname = name_buffer;
+    dest->fname_len = name_len;
+    dest->file_size = f_size;
+}
+
+void sendHeader(int stream_fileno, trans_header* header)
+{
+    write(stream_fileno, &header->n_files, sizeof(int));
+    known_file*current = header->files;
+    while (current->file_size > 0) {
+        sendFileHeader(stream_fileno, current);
+        current = current->next;
+    }
+}
+
+trans_header* recHeader(int read_stream)
+{
+    trans_header* ret = malloc(sizeof(trans_header));
+    read(read_stream, &ret->n_files, sizeof(int));
+    known_file* first = malloc(sizeof(known_file));
+    known_file* cur = first;
+    for (int i = 0; i < ret->n_files; i++) {
+        recFileHeader(read_stream, cur);
+        known_file* next = malloc(sizeof(known_file));
+        next->next = NULL;
+        next->fname = NULL;
+        next->file_size = 0;
+        cur->next = next;
+        cur = next;
+    }
+    ret->files = first;
+    return ret;
+}
 
 void sendDirectory(int stream_fileno, const char* dir_path)
 {
     trans_header* header = malloc(sizeof(trans_header));
-    known_file* k_file = malloc(sizeof(known_file));
-    k_file->file_size = 0;
+    known_file* first = malloc(sizeof(known_file));
+    known_file* k_file = first;
+    first->file_size = 0;
+
+    int n_files = 0.;
     getAllFiles(dir_path, k_file);
     while (k_file->file_size > 0) {
-        sendFile(stream_fileno, k_file->fname, k_file->file_size);
         k_file = k_file->next;
+        n_files++;
     }
-    printFileChain(k_file);    
+    header->n_files = n_files;
+    header->files = first;
+
+    sendHeader(stream_fileno, header);
+}
+
+void recDirectory(int read_stream)
+{
+    trans_header* header = recHeader(read_stream);
+    known_file* act = header->files;
+    while (act->fname != NULL) {
+        receiveFile(read_stream, act->fname, act->file_size);
+        act = act->next;
+    }
 }
 
 #endif

@@ -61,34 +61,14 @@ int main(int argc, char **argv) {
         }
     }
 
-    int devn = open(".test/out.txt", O_RDWR);
-    // write(devn, "teste123\n", strlen("teste123\n"));
-    sendDirectory(devn, ".");
-    // sendDir(devn, "src");
-    close(devn);
-    exit(0);
-
     if(SELF_TYPE == SENDER){
         printf("Sending file %s to host %s:%d\n",fileName,DEST_ADDRESS,PORT_SERVER);
         int socket = getSocketAsClient(DEST_ADDRESS, PORT_SERVER);
         if (socket <= 0) {
             return -1;
         }
-        // FILE* f = fopen(fileName,"rb");
-        int fno = open(fileName,O_RDONLY);
-        
-        char send_buffer[32];
-        bzero(send_buffer, sizeof(send_buffer));
-
-        int n = 1;
-        while (n > 0 && !gotSigPipe) {
-            n = read(fno, send_buffer, sizeof(send_buffer));
-            printf("Read %d bytes: \"%s\"\n", n, send_buffer);
-            write(socket, send_buffer, n);
-            bzero(send_buffer, sizeof(send_buffer));
-        }
+        sendDirectory(socket, fileName);
         closeSock(socket);
-
     } else {
         printf("Will listen at ip %s at port %d\n", DEST_ADDRESS, PORT_SERVER);
         printf("Writing data to %s\n", fileName);
