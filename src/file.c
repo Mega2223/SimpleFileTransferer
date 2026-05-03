@@ -79,14 +79,13 @@ void sendFile(int stream_fileno, const char* file_path, int n_bytes)
 
 void ensureHasPath(char* file_path)
 {
-    printf("Ensuring path for %s\n", file_path);
+    // printf("Ensuring path for %s\n", file_path);
     for (int i = 0; file_path[i] != '\0'; i++) {
-        // printf("i=%d[%c]\n",i,file_path[i]);
         if (file_path[i] == '/') {
             file_path[i] = '\0';
             int res = mkdir(file_path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
             if (res == -1 && errno == EEXIST) {
-                printf("Already exists\n");
+                // Directory already exists
             }
             ensureHasPath(file_path);
             file_path[i] = '/';
@@ -96,7 +95,9 @@ void ensureHasPath(char* file_path)
 
 void receiveFile(int r_stream_fileno, char* file_path, int bytes)
 {
-    int fstream = open(file_path, O_RDWR);
+    ensureHasPath(file_path);
+    int fstream = open(file_path, O_RDWR | O_TRUNC | O_CREAT);
+    printf("fstream = %d\n", fstream);
     char rec_buffer[SEND_BUFFER_SIZE];
     int r = 1;
     while (bytes) {
