@@ -5,15 +5,14 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "utils.h"
 
 // Returns fileno
-int getSocketAsServer(char* ip_addr, int port){
-    struct sockaddr_in self, dest;
+int getSocketAsServer(int port){
+    struct sockaddr_in self, sender;
 
     int sock = socket(AF_INET,SOCK_STREAM,0);
 
@@ -26,22 +25,21 @@ int getSocketAsServer(char* ip_addr, int port){
         sizeof(self));
 
     if(bind_err != 0){
-        const char* errmsg = "Socket binding error";
-        err(errmsg);
+        printf("Socket binding error\n");
         exit(-1);
     }
 
     listen(sock,10);
-    unsigned int c_size = sizeof(dest);
-    sock = accept(sock, (struct sockaddr*) &dest ,&c_size);
+    unsigned int c_size = sizeof(sender);
+    sock = accept(sock, (struct sockaddr*) &sender ,&c_size);
 
-    info("Server socket connected\n");
+    printf("Server socket connected to sender %d:%d\n", sender.sin_addr.s_addr, sender.sin_port);
 
     return sock;
 }
 
-int getSocketAsClient(char* server_addr, int server_port){
-    struct sockaddr_in self, server;
+int getSocketAsClient(char* server_addr, uint16_t server_port){
+    struct sockaddr_in server;
 
     int sock = socket(AF_INET,SOCK_STREAM,0);
 
@@ -58,7 +56,7 @@ int getSocketAsClient(char* server_addr, int server_port){
     int con_err = connect(sock, (struct sockaddr *) &server, sizeof server);
 
     if(con_err != 0){
-        err("Connection error\n");
+        printf("Connection error\n");
         return -1;
     }
     printf("Connected\n");
@@ -68,6 +66,18 @@ int getSocketAsClient(char* server_addr, int server_port){
 
 void closeSock(int fn) {
     close(fn);
+}
+
+int sigpipe_s = 0;
+
+void onSigPipe(int s) {
+    printf("Got SIGPIPE\n");
+    sigpipe_s = 1;
+}
+
+int sigpipe_status()
+{
+    return sigpipe_s;
 }
 
 #endif

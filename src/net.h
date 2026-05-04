@@ -7,6 +7,10 @@ int getSocketAsClient(char *server_addr, int server_port);
 
 void closeSock(int fn);
 
-void sendHeader(int stream_fileno, const char* dir_path);
+void onSigPipe(int s);
+
+int sigpipe_status();
+
+#define gotSigPipe (sigpipe_status())
 
 #endif

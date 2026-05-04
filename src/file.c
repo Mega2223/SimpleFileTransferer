@@ -2,7 +2,8 @@
 #define FILE_C
 
 #include "file.h"
-#include <asm-generic/errno-base.h>
+#include "net.h"
+
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,7 +25,7 @@ typedef struct known_file {
 } known_file;
 
 typedef struct trans_header {
-    int n_files;
+    int file_count;
     known_file* files;
 } trans_header;
 
@@ -51,9 +52,9 @@ void concatenatePath(char* dest, const char* dir, const char* filename)
 
 void sendFile(int stream_fileno, const char* file_path, int n_bytes)
 {
-    printf("Starting datastream for file \"%s\"\n", file_path);
+    printf("Starting datastream for file \"%s\".\n", file_path);
     if (stream_fileno <= 0) {
-        printf("Invalid fileno object");
+        printf("Invalid fileno object.\n");
     	exit(-1);
     }
     
@@ -73,19 +74,23 @@ void sendFile(int stream_fileno, const char* file_path, int n_bytes)
     	write(stream_fileno, send_buffer, (ssize_t) n);
         sent += n;
     }
-	printf("[%s] read %d bytes, %d expected\n",file_path,sent,n_bytes);
+    printf("[%s] read %d bytes, %d expected\n", file_path, sent, n_bytes);
+    if (sent != n_bytes) {
+        printf("Number of bytes does not match header, quitting.\n");
+        exit(-1);
+    }
     close(fno);
 }
 
 void ensureHasPath(char* file_path)
 {
-    // printf("Ensuring path for %s\n", file_path);
     for (int i = 0; file_path[i] != '\0'; i++) {
         if (file_path[i] == '/') {
             file_path[i] = '\0';
             int res = mkdir(file_path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-            if (res == -1 && errno == EEXIST) {
-                // Directory already exists
+            if (res == -1 && errno != EEXIST) {
+                file_path[i] = '/';
+                printf("Error creating directory %s, quitting.\n",file_path);
             }
             ensureHasPath(file_path);
             file_path[i] = '/';
@@ -99,25 +104,21 @@ void receiveFile(int r_stream_fileno, char* file_path, int bytes)
     int fstream = open(file_path, O_RDWR | O_TRUNC | O_CREAT);
     printf("fstream = %d\n", fstream);
     char rec_buffer[SEND_BUFFER_SIZE];
-    int r = 1;
     while (bytes) {
         bzero(rec_buffer, sizeof(char));
-        int n = read(r_stream_fileno, rec_buffer,
+        ssize_t n = read(r_stream_fileno, rec_buffer,
             bytes > SEND_BUFFER_SIZE ? SEND_BUFFER_SIZE : bytes);
-
         // printf("Reading \"%s\", [%d] bytes remaining.\n", file_path, bytes);
         // printf("Read [%d] bytes from a possible [%d].\n", n, bytes > SEND_BUFFER_SIZE ? SEND_BUFFER_SIZE : bytes);
-
-        // if (n == 0 || n < 0 || errno) {
-            // if (gotSigPipe) {
-            //     printf("Got piped\n");
-            //     break;
-            // }
-            // char w = '1';
-            // write(n,&w,sizeof(w));
-            // break;
-        // }
-        // printf("recv %d bytes\n", n);
+        if (n <= 0) {
+            char msg[] = "still alive?";
+            write(r_stream_fileno, msg, sizeof(msg));
+            if (gotSigPipe > 0) {
+                printf("Got SIGPIPE during transmittion, socket likely closed.\n");
+                close(r_stream_fileno);
+                exit(-1);
+            }
+        }
         if (((char*)rec_buffer)[0] == '\0' && n == 0) {
             printf("got an EOF\n");
             break;
@@ -133,7 +134,7 @@ int getAllFiles(const char* f_path, known_file* next_file)
     printf("at call %s\n", f_path);
     DIR* dir = opendir(f_path);
     if (dir != NULL) {
-        // Is dir
+        // Is directory
         int file_count = 0;
         struct dirent* de = NULL;
         do {
@@ -180,7 +181,6 @@ void printFileChain(known_file* first)
     printf("\n");
     while (cur != NULL && cur->file_size > 0) {
         printf("\"%s\" [%ld] -> ",cur->fname, cur->file_size);
-        // printf("%s>",cur->fname);
         cur = cur->next;
     }
     printf("\n");
@@ -209,7 +209,7 @@ void recFileHeader(int read_stream, known_file* dest)
 
 void sendHeader(int stream_fileno, trans_header* header)
 {
-    write(stream_fileno, &header->n_files, sizeof(int));
+    write(stream_fileno, &header->file_count, sizeof(int));
     known_file*current = header->files;
     while (current->file_size > 0) {
         sendFileHeader(stream_fileno, current);
@@ -220,10 +220,10 @@ void sendHeader(int stream_fileno, trans_header* header)
 trans_header* recHeader(int read_stream)
 {
     trans_header* ret = malloc(sizeof(trans_header));
-    read(read_stream, &ret->n_files, sizeof(int));
+    read(read_stream, &ret->file_count, sizeof(int));
     known_file* first = malloc(sizeof(known_file));
     known_file* cur = first;
-    for (int i = 0; i < ret->n_files; i++) {
+    for (int i = 0; i < ret->file_count; i++) {
         recFileHeader(read_stream, cur);
         known_file* next = malloc(sizeof(known_file));
         next->next = NULL;
@@ -250,7 +250,7 @@ void sendDirectory(int stream_fileno, const char* dir_path)
         k_file = k_file->next;
         n_files++;
     }
-    header->n_files = n_files;
+    header->file_count = n_files;
     header->files = first;
 
     sendHeader(stream_fileno, header);
@@ -275,7 +275,7 @@ void recDirectory(int read_stream)
 
 void printHeader(trans_header* header)
 {
-    printf("Header: Files[%d]\n", header->n_files);
+    printf("Header: Files[%d]\n", header->file_count);
     known_file* cur = header->files;
     while (cur->fname != NULL) {
         printf("File[%ld] %s\n",cur->file_size,cur->fname);
