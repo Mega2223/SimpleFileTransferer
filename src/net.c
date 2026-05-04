@@ -12,35 +12,40 @@
 
 // Returns fileno
 int getSocketAsServer(int port){
-    struct sockaddr_in self, sender;
+    struct sockaddr_in self;
+    self.sin_family = AF_INET;
+    self.sin_port = htons(port);
+    self.sin_addr.s_addr = INADDR_ANY;
 
-    int sock = socket(AF_INET,SOCK_STREAM,0);
+    int bind_err = 0;
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
 
     if(sock < 0){
         printf("Error creating isocket");
         exit(-1);
     }
 
-    self.sin_family = AF_INET;
-    self.sin_port = htons(port);
-    self.sin_addr.s_addr = INADDR_ANY;
-
-    int bind_err = bind(sock,
+    bind_err = bind(sock,
         (const struct sockaddr *)(&self),
         sizeof(self));
 
     if(bind_err != 0){
-        printf("Socket binding error\n");
+        printf("Socket binding error: %d %d\n",bind_err,errno);
         exit(-1);
     }
 
+    return sock;
+}
+
+int listenAtSocket(int sock)
+{
+    struct sockaddr_in sender;
     listen(sock,10);
     unsigned int c_size = sizeof(sender);
-    sock = accept(sock, (struct sockaddr*) &sender ,&c_size);
+    int rsock = accept(sock, (struct sockaddr*) &sender ,&c_size);
 
     printf("Server socket connected to sender %d:%d\n", sender.sin_addr.s_addr, sender.sin_port);
-
-    return sock;
+    return rsock;
 }
 
 int getSocketAsClient(char* server_addr, uint16_t server_port){

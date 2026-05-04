@@ -11,6 +11,8 @@ void onSigPipe(int s);
 
 int sigpipe_status();
 
+int listenAtSocket(int sock);
+
 #define gotSigPipe (sigpipe_status())
 
 #endif

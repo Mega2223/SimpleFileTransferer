@@ -23,6 +23,8 @@
 unsigned int SELF_PORT = 2000;
 char* DEST_ADDRESS = "127.0.0.1";
 
+int INTERRUPTED = 0;
+
 typedef enum APP_TYPE { RECEIVER = 0, SENDER = 1 } APP_TYPE;
 
 #define MAX_FILENAME_LEN 256
@@ -33,8 +35,12 @@ int DEBUG = 0;
 
 APP_TYPE SELF_TYPE = RECEIVER;
 
+void onSigInt(int i);
+
 int main(int argc, char **argv) {
     signal(SIGPIPE, onSigPipe);
+    signal(SIGINT, onSigInt);
+
     bzero(fileName, sizeof(fileName));
   
     for(int a = 0; a < argc; ++a){
@@ -68,11 +74,19 @@ int main(int argc, char **argv) {
         ensureHasPath(fileName);
         mkdir(fileName, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
         chdir(fileName);
-        printf("Will listen at ip %s at port %d\n", DEST_ADDRESS, SELF_PORT);
-        int socket = getSocketAsServer(SELF_PORT);
-        recDirectory(socket);
-        closeSock(socket);
+        int serverSocket = getSocketAsServer(SELF_PORT);
+        while (!INTERRUPTED) {
+            printf("Will listen at ip %s at port %d\n", DEST_ADDRESS, SELF_PORT);
+            int transSocket = listenAtSocket(serverSocket);
+            recDirectory(transSocket);
+            closeSock(transSocket);
+        }
     }
     printf("Quitting normally.\n");
     return 0;
+}
+
+void onSigInt(int i)
+{
+    INTERRUPTED = 1;
 }
