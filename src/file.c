@@ -57,7 +57,7 @@ void ensureHasPath(char* file_path)
     for (int i = 0; file_path[i] != '\0'; i++) {
         if (file_path[i] == '/') {
             file_path[i] = '\0';
-            int res = mkdir(file_path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+            int res = mkdir(file_path, S_IRWXO | S_IRGRP | S_IRWXU);
             if (res == -1 && errno != EEXIST) {
                 file_path[i] = '/';
                 printf("Error creating directory \"%s\": %d, quitting.\n", file_path, errno);
@@ -114,7 +114,7 @@ void sendFile(int stream_fileno, const char* file_path, long exp_bytes)
 void receiveFile(int r_stream_fileno, char* file_path, int bytes)
 {
     ensureHasPath(file_path);
-    int fstream = open(file_path, O_RDWR | O_TRUNC | O_CREAT);
+    int fstream = open(file_path, O_WRONLY | O_TRUNC | O_CREAT);
     char rec_buffer[SEND_BUFFER_SIZE];
     printf("Receiving %s[%d]\n", file_path,bytes);
     while (bytes) {
@@ -140,6 +140,7 @@ void receiveFile(int r_stream_fileno, char* file_path, int bytes)
         bytes -= n;
     }
     close(fstream);
+    chmod(file_path, S_IRWXU);
 }
 
 int getAllFiles(const char* f_path, known_file* next_file)
