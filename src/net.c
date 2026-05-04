@@ -16,6 +16,11 @@ int getSocketAsServer(int port){
 
     int sock = socket(AF_INET,SOCK_STREAM,0);
 
+    if(sock < 0){
+        printf("Error creating isocket");
+        exit(-1);
+    }
+
     self.sin_family = AF_INET;
     self.sin_port = htons(port);
     self.sin_addr.s_addr = INADDR_ANY;
@@ -56,7 +61,7 @@ int getSocketAsClient(char* server_addr, uint16_t server_port){
     int con_err = connect(sock, (struct sockaddr *) &server, sizeof server);
 
     if(con_err != 0){
-        printf("Connection error\n");
+        printf("Connection error: %d, %d\n", con_err, errno);
         return -1;
     }
     printf("Connected\n");
@@ -71,7 +76,9 @@ void closeSock(int fn) {
 int sigpipe_s = 0;
 
 void onSigPipe(int s) {
-    printf("Got SIGPIPE\n");
+    if (sigpipe_s == 0) {
+        printf("Got SIGPIPE\n");
+    }
     sigpipe_s = 1;
 }
 

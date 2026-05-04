@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
@@ -55,7 +56,8 @@ int main(int argc, char **argv) {
         }
     }
 
-    if(SELF_TYPE == SENDER){
+    if (SELF_TYPE == SENDER) {
+        chdir(fileName);
         printf("Sending \"%s\" to host %s:%d\n",fileName,DEST_ADDRESS,SELF_PORT);
         int socket = getSocketAsClient(DEST_ADDRESS, SELF_PORT);
         if (socket <= 0) {
@@ -64,10 +66,14 @@ int main(int argc, char **argv) {
         sendDirectory(socket, fileName);
         closeSock(socket);
     } else {
+        ensureHasPath(fileName);
+        mkdir(fileName, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+        chdir(fileName);
         printf("Will listen at ip %s at port %d\n", DEST_ADDRESS, SELF_PORT);
-        int socket = getSocketAsServer(DEST_ADDRESS, SELF_PORT);
+        int socket = getSocketAsServer(SELF_PORT);
         recDirectory(socket);
+        closeSock(socket);
     }
-    printf("Bye");
+    printf("Quitting normally.\n");
     return 0;
 }
