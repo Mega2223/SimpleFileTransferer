@@ -57,7 +57,6 @@ int main(int argc, char **argv) {
     }
 
     if (SELF_TYPE == SENDER) {
-        chdir(fileName);
         printf("Sending \"%s\" to host %s:%d\n",fileName,DEST_ADDRESS,SELF_PORT);
         int socket = getSocketAsClient(DEST_ADDRESS, SELF_PORT);
         if (socket <= 0) {
