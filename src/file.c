@@ -237,7 +237,8 @@ void recFileHeader(int read_stream, known_file* dest)
     read(read_stream, &name_len, sizeof(int));
     char* name_buffer = malloc(name_len + 1);
     read(read_stream, name_buffer, name_len);
-    name_buffer[name_len] = '\0';
+    if (name_len > 0)
+        name_buffer[name_len] = '\0';
     dest->fname = name_buffer;
     dest->fname_len = name_len;
     dest->file_size = f_size;
