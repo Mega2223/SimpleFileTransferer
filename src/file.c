@@ -250,7 +250,7 @@ void printFileChain(known_file* first)
 
 void sendFileHeader(int stream_fileno, known_file* k_file)
 {
-    int name_len = strlen(k_file->fname);
+    int name_len = k_file->fname_len;
     int written = 0, expected = sizeof(long) + sizeof(int) + name_len;
     written += writeExact(stream_fileno, &k_file->file_size, sizeof(long));
     written += writeExact(stream_fileno, &name_len, sizeof(int));
@@ -294,7 +294,7 @@ void sendHeader(int stream_fileno, trans_header* header)
 {
     writeExact(stream_fileno, &header->file_count, sizeof(int));
     known_file*current = header->files;
-    while (current->file_size > 0) {
+    while (current != NULL) {
         sendFileHeader(stream_fileno, current);
         current = current->next;
     }
