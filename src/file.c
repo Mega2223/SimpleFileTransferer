@@ -323,7 +323,7 @@ void printHeader(trans_header* header)
     known_file* cur = header->files;
     int c = 0;
     while (cur != NULL) {
-        printf("File[%d][%ld] %s\n",++c,cur->file_size,cur->fname);
+        printf("File[%d][%ld] %s[%ld]\n",++c,cur->file_size,cur->fname,cur->fname_len);
         cur = cur->next;
     }
     printf("End header.\n");
