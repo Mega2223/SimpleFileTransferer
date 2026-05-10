@@ -259,7 +259,7 @@ void recFileHeader(int read_stream, known_file* dest)
             exit(-2);
         } else {
             name_buffer[name_len] = '\0';
-            printf("Read %s sucessfully", name_buffer);
+            printf("Read %s sucessfully\n", name_buffer);
         }
         name_buffer[name_len] = '\0';
     }
