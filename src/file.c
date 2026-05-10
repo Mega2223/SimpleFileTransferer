@@ -38,23 +38,29 @@ known_file* gen_kfile()
     ret->fname = NULL;
     ret->fname_len = 0;
     return ret;
-};
+}
+
+int READ_BLOCK = 0, WRITE_BLOCK = 0;
 
 ssize_t readExact(int fileno, void* buffer, size_t bytec)
 {
+    READ_BLOCK++;
     ssize_t rd = 0;
     while (rd < bytec) {
         rd += read(fileno, &buffer[rd], bytec-rd);
     }
+    READ_BLOCK--;
     return rd;
 }
 
 ssize_t writeExact(int fileno, const void* buffer, size_t bytec)
 {
+    WRITE_BLOCK++;
     ssize_t written = 0;
     while (written < bytec) {
         written += write(fileno, &buffer[written], bytec-written);
     }
+    WRITE_BLOCK--;
     return written;
 }
 

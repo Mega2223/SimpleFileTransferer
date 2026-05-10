@@ -17,5 +17,4 @@ void printHeader(trans_header* header);
 
 void ensureHasPath(char* file_path);
 
-
 #endif

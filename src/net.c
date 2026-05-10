@@ -85,6 +85,7 @@ void onSigPipe(int s) {
         printf("Got SIGPIPE\n");
     }
     sigpipe_s = 1;
+    exit(-1);
 }
 
 int sigpipe_status()
