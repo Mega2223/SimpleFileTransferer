@@ -249,9 +249,10 @@ void recFileHeader(int read_stream, known_file* dest)
     received_bytes += read(read_stream, &f_size, sizeof(long));
     received_bytes += read(read_stream, &name_len, sizeof(int));
     char* name_buffer = malloc(name_len + 1);
+    // expected_bytes += name_len;
     if (name_len > 0) {
-        expected_bytes += name_len;
-        received_bytes += read(read_stream, name_buffer, name_len);
+        // received_bytes += ;
+        read(read_stream, name_buffer, name_len);
         name_buffer[name_len] = '\0';
     }
     if (expected_bytes != received_bytes) {
