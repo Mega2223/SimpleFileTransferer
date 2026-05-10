@@ -42,20 +42,20 @@ known_file* gen_kfile()
 
 ssize_t safeRead(int fileno, void* buffer, size_t bytec)
 {
-    ssize_t r = read(fileno, buffer, bytec);
-    if (r != bytec) {
-        printf("ERROR: Reading error [%ld/%ld]\n",r,bytec);
+    ssize_t rd = 0;
+    while (rd < bytec) {
+        rd += read(fileno, &buffer[rd], bytec-rd);
     }
-    return r;
+    return rd;
 }
 
 ssize_t safeWrite(int fileno, const void* buffer, size_t bytec)
 {
-    ssize_t w = write(fileno, buffer, bytec);
-    if (w != bytec) {
-        printf("ERROR: Writing error [%ld/%ld]\n",w,bytec);
+    ssize_t written = 0;
+    while (written < bytec) {
+        written += write(fileno, &buffer[written], bytec-written);
     }
-    return w;
+    return written;
 }
 
 long fileSize(const char* file_name)
