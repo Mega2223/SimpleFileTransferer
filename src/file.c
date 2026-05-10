@@ -264,7 +264,7 @@ void sendFileHeader(int stream_fileno, known_file* k_file)
 void recFileHeader(int read_stream, known_file* dest)
 {
     long f_size;
-    int name_len, expected_bytes = sizeof(long) + sizeof(int), received_bytes = 0;
+    int name_len = 0, expected_bytes = sizeof(long) + sizeof(int), received_bytes = 0;
     received_bytes += readExact(read_stream, &f_size, sizeof(long));
     received_bytes += readExact(read_stream, &name_len, sizeof(int));
     char* name_buffer = malloc(name_len + 1);
