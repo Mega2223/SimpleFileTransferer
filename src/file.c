@@ -40,7 +40,7 @@ known_file* gen_kfile()
     return ret;
 };
 
-ssize_t safeRead(int fileno, void* buffer, size_t bytec)
+ssize_t readExact(int fileno, void* buffer, size_t bytec)
 {
     ssize_t rd = 0;
     while (rd < bytec) {
@@ -49,7 +49,7 @@ ssize_t safeRead(int fileno, void* buffer, size_t bytec)
     return rd;
 }
 
-ssize_t safeWrite(int fileno, const void* buffer, size_t bytec)
+ssize_t writeExact(int fileno, const void* buffer, size_t bytec)
 {
     ssize_t written = 0;
     while (written < bytec) {
@@ -112,18 +112,18 @@ void sendFile(int stream_fileno, const char* file_path, long exp_bytes)
     ssize_t n = 1;
     while (n) {
         bzero(send_buffer, SEND_BUFFER_SIZE);
-        n = safeRead(fno, send_buffer, SEND_BUFFER_SIZE);
+        n = read(fno, send_buffer, SEND_BUFFER_SIZE);
         if (n < 0) {
             printf("Reading error: %ld : %d", n, errno);
             exit(-1);
         }
-        // printf("Read %ld bytes at %s\n", n, file_path);
+        printf("Read %ld bytes at %s\n", n, file_path);
         int written = 0;
         // while (written < n) {
         //     char send_loc = send_buffer[written];
         //     written += safeWrite(stream_fileno, &send_loc, n - written);
         // }
-        safeWrite(stream_fileno, &send_buffer, n);
+        writeExact(stream_fileno, &send_buffer, n);
     	
         sent += n;
     }
@@ -143,13 +143,13 @@ void receiveFile(int r_stream_fileno, char* file_path, int bytes)
     printf("Receiving %s[%d]\n", file_path,bytes);
     while (bytes) {
         bzero(rec_buffer, sizeof(char));
-        ssize_t n = safeRead(r_stream_fileno, rec_buffer,
+        ssize_t n = readExact(r_stream_fileno, rec_buffer,
             bytes > SEND_BUFFER_SIZE ? SEND_BUFFER_SIZE : bytes);
         // printf("Reading \"%s\", [%d] bytes remaining.\n", file_path, bytes);
         // printf("Read [%d] bytes from a possible [%d].\n", n, bytes > SEND_BUFFER_SIZE ? SEND_BUFFER_SIZE : bytes);
         if (n <= 0) {
             char msg[] = "still alive?";
-            safeWrite(r_stream_fileno, msg, sizeof(msg));
+            writeExact(r_stream_fileno, msg, sizeof(msg));
         }
         if (gotSigPipe) {
             printf("Got SIGPIPE during transmittion, socket likely closed.\n");
@@ -160,7 +160,7 @@ void receiveFile(int r_stream_fileno, char* file_path, int bytes)
         //     printf("got an EOF\n");
         //     break;
         // }
-        safeWrite(fstream, rec_buffer, n);
+        writeExact(fstream, rec_buffer, n);
         bytes -= n;
     }
     close(fstream);
@@ -252,9 +252,9 @@ void sendFileHeader(int stream_fileno, known_file* k_file)
 {
     int name_len = strlen(k_file->fname);
     int written = 0, expected = sizeof(long) + sizeof(int) + name_len;
-    written += safeWrite(stream_fileno, &k_file->file_size, sizeof(long));
-    written += safeWrite(stream_fileno, &name_len, sizeof(int));
-    written += safeWrite(stream_fileno, k_file->fname, name_len);
+    written += writeExact(stream_fileno, &k_file->file_size, sizeof(long));
+    written += writeExact(stream_fileno, &name_len, sizeof(int));
+    written += writeExact(stream_fileno, k_file->fname, name_len);
     if (expected != written) {
         printf("WARNING: Sending discrepancy at %s: [%d/%d]\n", k_file->fname,written,expected);
         exit(-1);
@@ -265,12 +265,12 @@ void recFileHeader(int read_stream, known_file* dest)
 {
     long f_size;
     int name_len, expected_bytes = sizeof(long) + sizeof(int), received_bytes = 0;
-    received_bytes += safeRead(read_stream, &f_size, sizeof(long));
-    received_bytes += safeRead(read_stream, &name_len, sizeof(int));
+    received_bytes += readExact(read_stream, &f_size, sizeof(long));
+    received_bytes += readExact(read_stream, &name_len, sizeof(int));
     char* name_buffer = malloc(name_len + 1);
     // expected_bytes += name_len;
     if (name_len > 0) {
-        int name_r = safeRead(read_stream, name_buffer, name_len);
+        int name_r = readExact(read_stream, name_buffer, name_len);
         if (name_r != name_len) {
             printf("Namelen discrepancy :p [%d/%d]\n", name_r, name_len);
             name_buffer[name_len] = '\0';
@@ -293,7 +293,7 @@ void recFileHeader(int read_stream, known_file* dest)
 
 void sendHeader(int stream_fileno, trans_header* header)
 {
-    safeWrite(stream_fileno, &header->file_count, sizeof(int));
+    writeExact(stream_fileno, &header->file_count, sizeof(int));
     known_file*current = header->files;
     while (current->file_size > 0) {
         sendFileHeader(stream_fileno, current);
@@ -304,7 +304,7 @@ void sendHeader(int stream_fileno, trans_header* header)
 trans_header* recHeader(int read_stream)
 {
     trans_header* ret = malloc(sizeof(trans_header));
-    safeRead(read_stream, &ret->file_count, sizeof(int));
+    readExact(read_stream, &ret->file_count, sizeof(int));
     known_file* first = gen_kfile();
     known_file* cur = first;
     for (int i = 0; i < ret->file_count; i++) {
