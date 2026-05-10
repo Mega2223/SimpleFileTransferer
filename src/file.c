@@ -257,6 +257,9 @@ void recFileHeader(int read_stream, known_file* dest)
             name_buffer[name_len] = '\0';
             printf("s = \"%s\"",name_buffer);
             exit(-2);
+        } else {
+            name_buffer[name_len] = '\0';
+            printf("Read %s sucessfully", name_buffer);
         }
         name_buffer[name_len] = '\0';
     }
