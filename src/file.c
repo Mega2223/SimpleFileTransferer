@@ -270,7 +270,7 @@ void recFileHeader(int read_stream, known_file* dest)
     char* name_buffer = malloc(name_len + 1);
     // expected_bytes += name_len;
     if (name_len > 0) {
-        printf("Taking %d bytes", name_len);
+        printf("Taking %d bytes\n", name_len);
         int name_r = readExact(read_stream, name_buffer, name_len);
         if (name_r != name_len) {
             printf("Namelen discrepancy :p [%d/%d]\n", name_r, name_len);
