@@ -204,6 +204,7 @@ int getAllFiles(const char* f_path, known_file* next_file)
         char* n_name = malloc(strlen(f_path) + 1);
         strcpy(n_name, f_path);
         next_file->fname = n_name;
+        next_file->fname_len = strlen(n_name);
         next_file->file_size = fileSize(n_name);
         next_file->next = gen_kfile();
         printf("Setting %p [%ld] to file \"%s\", new pointer: %p\n",
@@ -231,20 +232,31 @@ void printFileChain(known_file* first)
 void sendFileHeader(int stream_fileno, known_file* k_file)
 {
     int name_len = strlen(k_file->fname);
-    write(stream_fileno, &k_file->file_size, sizeof(long));
-    write(stream_fileno, &name_len, sizeof(int));
-    write(stream_fileno, k_file->fname, name_len);
+    int written = 0, expected = sizeof(long) + sizeof(int) + name_len;
+    written += write(stream_fileno, &k_file->file_size, sizeof(long));
+    written += write(stream_fileno, &name_len, sizeof(int));
+    written += write(stream_fileno, k_file->fname, name_len);
+    if (expected != written) {
+        printf("WARNING: Sending discrepancy at %s: [%d/%d]\n", k_file->fname,written,expected);
+        exit(-1);
+    }
 }
 
 void recFileHeader(int read_stream, known_file* dest)
 {
-    long f_size; int name_len;
-    read(read_stream, &f_size, sizeof(long));
-    read(read_stream, &name_len, sizeof(int));
+    long f_size;
+    int name_len, expected_bytes = sizeof(long) + sizeof(int), received_bytes = 0;
+    received_bytes += read(read_stream, &f_size, sizeof(long));
+    received_bytes += read(read_stream, &name_len, sizeof(int));
     char* name_buffer = malloc(name_len + 1);
     if (name_len > 0) {
-        read(read_stream, name_buffer, name_len);
+        expected_bytes += name_len;
+        received_bytes += read(read_stream, name_buffer, name_len);
         name_buffer[name_len] = '\0';
+    }
+    if (expected_bytes != received_bytes) {
+        printf("WARNING: Receive discrepancy: [%d/%d]\n", received_bytes, expected_bytes);
+        exit(-1);
     }
     dest->fname = name_buffer;
     dest->fname_len = name_len;
