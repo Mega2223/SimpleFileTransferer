@@ -2,3 +2,4 @@ bin/
 .test/
 .vscode/
 .test/
+*.log

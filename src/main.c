@@ -32,6 +32,7 @@ typedef enum APP_TYPE { RECEIVER = 0, SENDER = 1 } APP_TYPE;
 char fileName[MAX_FILENAME_LEN] = ".";
 
 int DEBUG = 0;
+int PIPE = 0;
 
 APP_TYPE SELF_TYPE = RECEIVER;
 
@@ -53,6 +54,9 @@ int main(int argc, char **argv) {
         if(strcmp(argv[a],"--port") == 0){
             SELF_PORT = (unsigned int) atoi(argv[++a]);
         }
+        if(strcmp(argv[a],"--pipe") == 0){
+            PIPE = 1;
+        }
         if (strcmp(argv[a], "--file") == 0) {
             if (strlen(argv[a+1]) > MAX_FILENAME_LEN) {
                 printf("File name way too large, max len is %d.\n", MAX_FILENAME_LEN);
@@ -68,14 +72,39 @@ int main(int argc, char **argv) {
         if (socket <= 0) {
             return -1;
         }
-        chdir(fileName);
-        sendDirectory(socket);
+        int chdir_r = chdir(fileName);
+        if (chdir_r != 0) {
+            printf("Error opening %s, quitting.\n", fileName);
+            return -1;
+        }
+        if (PIPE) {
+            char buffer[32];
+            for (;;) {
+                int n = read(STDIN_FILENO, buffer, 32);
+                write(socket, buffer, n);
+            }
+        } else {
+            sendDirectory(socket);
+        }
         closeSock(socket);
     } else {
         ensureHasPath(fileName);
         mkdir(fileName, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-        chdir(fileName);
+        int chdir_r = chdir(fileName);
+        if (chdir_r != 0) {
+            printf("Error opening %s, quitting.\n", fileName);
+            return -1;
+        }
         int serverSocket = getSocketAsServer(SELF_PORT);
+        if (PIPE) {
+            int transSocket = listenAtSocket(serverSocket);
+            char buffer[32];
+            for (;;) {
+                int n = read(transSocket, buffer, 32);
+                write(STDOUT_FILENO, buffer, n);
+            }
+            closeSock(transSocket);
+        }
         while (!INTERRUPTED) {
             printf("Will listen at ip %s at port %d\n", DEST_ADDRESS, SELF_PORT);
             int transSocket = listenAtSocket(serverSocket);

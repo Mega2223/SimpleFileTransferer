@@ -99,8 +99,13 @@ void sendFile(int stream_fileno, const char* file_path, long exp_bytes)
             printf("Reading error: %ld : %d", n, errno);
             exit(-1);
         }
-		// printf("Read %ld bytes at %s\n", n, file_path);
-    	write(stream_fileno, send_buffer, (ssize_t) n);
+        // printf("Read %ld bytes at %s\n", n, file_path);
+        int written = 0;
+        while (written < n) {
+            char send_loc = send_buffer[written];
+            written += write(stream_fileno, &send_loc, n - written);
+        }
+    	
         sent += n;
     }
     printf("[%s] read %d bytes, %ld expected\n", file_path, sent, exp_bytes);
@@ -132,10 +137,10 @@ void receiveFile(int r_stream_fileno, char* file_path, int bytes)
             close(r_stream_fileno);
             exit(-1);
         }
-        if (((char*)rec_buffer)[0] == '\0' && n == 0) {
-            printf("got an EOF\n");
-            break;
-        }
+        // if (((char*)rec_buffer)[0] == '\0' && n == 0) {
+        //     printf("got an EOF\n");
+        //     break;
+        // }
         write(fstream, rec_buffer, n);
         bytes -= n;
     }
@@ -192,10 +197,11 @@ int getAllFiles(const char* f_path, known_file* next_file)
             if (next_file->file_size != 0) {
                 printf("fsize = %ld\n",next_file->file_size);
             }
-            
+
+        } else if (fileSize(f_path) == 0) {
+            return 0;
         }
         char* n_name = malloc(strlen(f_path) + 1);
-        // bzero(n_name, strlen(f_path) + 1);
         strcpy(n_name, f_path);
         next_file->fname = n_name;
         next_file->file_size = fileSize(n_name);
@@ -236,9 +242,10 @@ void recFileHeader(int read_stream, known_file* dest)
     read(read_stream, &f_size, sizeof(long));
     read(read_stream, &name_len, sizeof(int));
     char* name_buffer = malloc(name_len + 1);
-    read(read_stream, name_buffer, name_len);
-    if (name_len > 0)
+    if (name_len > 0) {
+        read(read_stream, name_buffer, name_len);
         name_buffer[name_len] = '\0';
+    }
     dest->fname = name_buffer;
     dest->fname_len = name_len;
     dest->file_size = f_size;
