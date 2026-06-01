@@ -1,4 +1,5 @@
-#ifndef FILE_C
+t(SIGINT);
+}#ifndef FILE_C
 #define FILE_C
 
 #include "file.h"
@@ -376,7 +377,4 @@ void printHeader(trans_header* header)
         printf("File[%d][%ld] %s[%ld]\n",++c,cur->file_size,cur->fname,cur->fname_len);
         cur = cur->next;
     }
-    printf("End header.\n");
-}
-
-#endif
+    printf("End header.\n")

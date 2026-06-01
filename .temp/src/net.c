@@ -1,4 +1,6 @@
-#ifndef NET_C
+th);
+
+#endif#ifndef NET_C
 #define NET_C
 
 #include <arpa/inet.h>
@@ -125,7 +127,4 @@ void printBytes(void* loc, int bytes, int offset)
          
         printf("%c%c",char_to_hex(most_sig),char_to_hex(least_sig));
     }
-    printf("]\n");
-}
-
-#endif
+    printf("]\n")

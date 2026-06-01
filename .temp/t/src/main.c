@@ -1,3 +1,7 @@
+;
+}
+
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
@@ -127,5 +131,4 @@ int main(int argc, char **argv) {
 void onSigInt(int i)
 {
     INTERRUPTED = 1;
-    exit(SIGINT);
-}
+    exi

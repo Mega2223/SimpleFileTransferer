@@ -1,4 +1,5 @@
-#ifndef FILE_C
+t(SIGINT);
+}#ifndef FILE_C
 #define FILE_C
 
 #include "file.h"
@@ -153,9 +154,6 @@ void receiveFile(int r_stream_fileno, char* file_path, int bytes)
         bzero(rec_buffer, sizeof(char));
         ssize_t n = readExact(r_stream_fileno, rec_buffer,
             bytes > SEND_BUFFER_SIZE ? SEND_BUFFER_SIZE : bytes);
-        if (getNetworkDebug()){
-            printBytes(rec_buffer,SEND_BUFFER_SIZE,n);
-        }
         // printf("Reading \"%s\", [%d] bytes remaining.\n", file_path, bytes);
         // printf("Read [%d] bytes from a possible [%d].\n", n, bytes > SEND_BUFFER_SIZE ? SEND_BUFFER_SIZE : bytes);
         if (n <= 0) {
@@ -376,7 +374,4 @@ void printHeader(trans_header* header)
         printf("File[%d][%ld] %s[%ld]\n",++c,cur->file_size,cur->fname,cur->fname_len);
         cur = cur->next;
     }
-    printf("End header.\n");
-}
-
-#endif
+    printf("End header.\n"

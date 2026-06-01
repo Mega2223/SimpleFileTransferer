@@ -1,4 +1,6 @@
-#ifndef NET_C
+th);
+
+#endif#ifndef NET_C
 #define NET_C
 
 #include <arpa/inet.h>
@@ -105,27 +107,13 @@ int getNetworkDebug()
     return NETWORK_DEBUG;
 }
 
-char char_to_hex(char c)
-{
-    c = c & 0XF;
-    if (c <= 9 && c >= 0) return c + '0';
-    else if ( c >= 10 && c <= 16) return c + 'A' - 10;
-    else return '?';
-}
-
 void printBytes(void* loc, int bytes, int offset)
 {
     printf("[%7d*%d]: [",offset,bytes);
     for(int i = 0; i < bytes; ++i){
         char v = ((char*) loc)[i];
-        // if (v == '\n') v = 'N';
-        // if (v == '  ') v = ' ';
-        char most_sig = (v >> 4) & 0XF;
-        char least_sig = v & 0XF;
-         
-        printf("%c%c",char_to_hex(most_sig),char_to_hex(least_sig));
+        if (v == '\n') v = 'N';
+        if (v == '  ') v = ' ';
+        printf("%c",v);
     }
-    printf("]\n");
-}
-
-#endif
+    printf("]\n")
