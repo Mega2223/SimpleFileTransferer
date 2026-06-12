@@ -6,6 +6,7 @@
 #include <string.h>
 #include <signal.h>
 #include <fcntl.h>
+#include <dirent.h>
 
 #include "net.h"
 #include "file.h"
@@ -91,7 +92,16 @@ int main(int argc, char **argv) {
                 write(socket, buffer, n);
             }
         } else {
-            sendDirectory(socket);
+            if(isDir(fileName)){
+                DIR* dir = opendir(fileName);
+                struct dirent* de = NULL;
+                do {
+                    if(strlen(de->d_name) == 0 || de->d_name[0] == '.') break;
+                    size_t ll = strlen(fileName) + strlen(de->d_name) + 2;
+                    char nfile_path[ll];
+                    concatenatePath(nfile_path,fileName,de->d_name);
+                } while (de != NULL);
+            }
         }
         closeSock(socket);
     } else {
@@ -115,7 +125,7 @@ int main(int argc, char **argv) {
         while (!INTERRUPTED) {
             printf("Will listen at ip %s at port %d\n", DEST_ADDRESS, SELF_PORT);
             int transSocket = listenAtSocket(serverSocket);
-            recDirectory(transSocket);
+            receiveFile(transSocket);
             closeSock(transSocket);
             if (EXEC_ONCE) break;
         }

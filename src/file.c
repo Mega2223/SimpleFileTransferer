@@ -17,27 +17,38 @@
 
 #define SEND_BUFFER_SIZE 64
 
-typedef struct known_file {
-    size_t fname_len;
-    long file_size;
-    char* fname;
-    struct known_file* next;
-} known_file;
+typedef struct file_info {
+    unsigned int namelen;
+    char* name;
+    int bytes;
+} file_info;
 
-typedef struct trans_header {
-    int file_count;
-    known_file* files;
-} trans_header;
+void sendFileInfo(int stream, const char* filename, int bytes){
+    file_info f;
+    f.name = malloc(strlen(filename) + 1);
+    strcpy(f.name,filename);
+    f.bytes = bytes;
+    f.namelen = strlen(filename);
+    write(stream,&f.bytes,sizeof(f.bytes));
+    write(stream,&f.namelen,sizeof(f.namelen));
+    write(stream, f.name, f.namelen);
+}
 
-known_file* gen_kfile()
-{
-    known_file* ret = malloc(sizeof(known_file));
-    bzero(ret, sizeof(known_file));
-    ret->next = NULL;
-    ret->file_size = 0;
-    ret->fname = NULL;
-    ret->fname_len = 0;
+file_info* recFileInfo(int stream){
+    file_info* ret = malloc(sizeof(file_info));
+    read(stream,&ret->bytes,sizeof(ret->bytes));
+    read(stream,&ret->namelen,sizeof(ret->namelen));
+    char* name = malloc(ret->namelen+1);
+    read(stream,name,ret->namelen);
+    name[ret->namelen - 1] = '\0';
+    ret->name = name;
     return ret;
+}
+
+int isDir(const char* fname){
+    struct stat f_stat;
+    stat(fname, &f_stat);
+    return S_ISDIR(f_stat.st_mode);
 }
 
 int READ_BLOCK = 0, WRITE_BLOCK = 0;
@@ -72,7 +83,7 @@ long fileSize(const char* file_name)
         printf("Error getting the file size for %s\n", file_name);
         exit(-1);
     }
-    printf("System reported %ld bytes for file %s.\n",file_stat.st_size,file_name);
+    // printf("System reported %ld bytes for file %s.\n",file_stat.st_size,file_name);
     return file_stat.st_size;
 }
 
@@ -114,6 +125,7 @@ void sendFile(int stream_fileno, const char* file_path, long exp_bytes)
     int fno = open(file_path,O_RDONLY);
     char send_buffer[SEND_BUFFER_SIZE];
     int sent = 0;
+    sendFileInfo(stream_fileno,file_path,exp_bytes);
 
     ssize_t n = 1;
     while (n) {
@@ -123,12 +135,9 @@ void sendFile(int stream_fileno, const char* file_path, long exp_bytes)
             printf("Reading error: %ld : %d", n, errno);
             exit(-1);
         }
-        // printf("Read %ld bytes at %s\n", n, file_path);
+
         int written = 0;
-        // while (written < n) {
-        //     char send_loc = send_buffer[written];
-        //     written += safeWrite(stream_fileno, &send_loc, n - written);
-        // }
+
         writeExact(stream_fileno, &send_buffer, n);
     	if (getNetworkDebug()){
             printBytes(send_buffer,SEND_BUFFER_SIZE,sent);
@@ -143,12 +152,16 @@ void sendFile(int stream_fileno, const char* file_path, long exp_bytes)
     close(fno);
 }
 
-void receiveFile(int r_stream_fileno, char* file_path, int bytes)
+void receiveFile(int r_stream_fileno)
 {
-    ensureHasPath(file_path);
-    int fstream = open(file_path, O_WRONLY | O_TRUNC | O_CREAT);
+    file_info* rec = recFileInfo(r_stream_fileno);
+
+    ensureHasPath(rec->name);
+    int fstream = open(rec->name, O_WRONLY | O_TRUNC | O_CREAT);
     char rec_buffer[SEND_BUFFER_SIZE];
-    printf("Receiving %s[%d]\n", file_path,bytes);
+    int bytes = rec->bytes;
+    printf("Receiving %s[%d]\n", rec->name,bytes);
+
     while (bytes) {
         bzero(rec_buffer, sizeof(char));
         ssize_t n = readExact(r_stream_fileno, rec_buffer,
@@ -167,216 +180,12 @@ void receiveFile(int r_stream_fileno, char* file_path, int bytes)
             close(r_stream_fileno);
             exit(-1);
         }
-        // if (((char*)rec_buffer)[0] == '\0' && n == 0) {
-        //     printf("got an EOF\n");
-        //     break;
-        // }
         writeExact(fstream, rec_buffer, n);
         bytes -= n;
     }
     close(fstream);
-    chmod(file_path, S_IRWXU);
+    chmod(rec->name, S_IRWXU);
 }
 
 const char* SELF_PATH = ".";
-
-int getAllFiles(const char* f_path, known_file* next_file)
-{
-    printf("At call %s\n", f_path);
-    if (f_path == NULL) {
-        f_path = SELF_PATH;
-    }
-    DIR* dir = opendir(f_path);
-    if (dir != NULL) {
-        // Is directory
-        int file_count = 0;
-        struct dirent* de = NULL;
-        do {
-            de = readdir(dir);
-            if (de == NULL || de->d_name[0] == '.')
-                continue;
-            char nf_path[strlen(f_path) + strlen(de->d_name) + 2 + 2];
-            concatenatePath(nf_path, f_path, de->d_name);
-            printf("looking file \"%s\" (\"%s\",\"%s\")\n", nf_path, f_path, de->d_name);
-            int f_files = getAllFiles(nf_path, next_file);
-            if (f_files == -1){
-                file_count++;
-                printf("Nextpo %p %p\n", next_file, next_file->next);
-                next_file = next_file->next;
-            } else {
-                for (int i = 0; i < f_files; i++) { // This is so dumb i love it
-                    printf("Exchanging %p to %p\n", next_file, next_file->next);
-                    next_file = next_file->next;
-                }
-            }
-        } while (de != NULL);
-        printf("File getter call for (%s) returning %d\n",f_path,file_count);
-        return file_count;
-    } else if (errno == ENOTDIR) {
-        // Is file
-        printf("%s am file\n",f_path);
-        if (next_file->fname != NULL || next_file->fname_len != 0 || next_file->file_size != 0) {
-            printf("Corruption issue for file %s \n", f_path);
-            if (next_file->fname != NULL) {
-                printf("fname = %p\n", next_file->fname);
-                printf("(%s)\n", next_file->fname);
-            }
-            if (next_file->fname_len != 0) {
-                printf("fname_len = %ld\n",next_file->fname_len);
-            }
-            if (next_file->file_size != 0) {
-                printf("fsize = %ld\n",next_file->file_size);
-            }
-
-        } else if (fileSize(f_path) == 0) {
-            return 0;
-        }
-        char* n_name = malloc(strlen(f_path) + 1);
-        strcpy(n_name, f_path);
-        next_file->fname = n_name;
-        next_file->fname_len = strlen(n_name);
-        next_file->file_size = fileSize(n_name);
-        next_file->next = gen_kfile();
-        printf("Setting %p [%ld] to file \"%s\", new pointer: %p\n",
-            next_file, next_file->file_size,
-            next_file->fname,
-            next_file->next);
-        return -1;
-    } else {
-        printf("Error for file %s\n", f_path);
-        return -2;
-	}
-}
-
-void printFileChain(known_file* first)
-{
-    known_file* cur = first;
-    printf("\n");
-    while (cur != NULL && cur->file_size > 0) {
-        printf("\"%s\" [%ld] -> ",cur->fname, cur->file_size);
-        cur = cur->next;
-    }
-    printf("\n");
-}
-
-void sendFileHeader(int stream_fileno, known_file* k_file)
-{
-    int name_len = k_file->fname_len;
-    int written = 0, expected = sizeof(long) + sizeof(int) + name_len;
-    written += writeExact(stream_fileno, &k_file->file_size, sizeof(long));
-    written += writeExact(stream_fileno, &name_len, sizeof(int));
-    written += writeExact(stream_fileno, k_file->fname, name_len);
-    if (expected != written) {
-        printf("WARNING: Sending discrepancy at %s: [%d/%d]\n", k_file->fname,written,expected);
-        exit(-1);
-    }
-}
-
-void recFileHeader(int read_stream, known_file* dest)
-{
-    long f_size;
-    int name_len = 0, expected_bytes = sizeof(long) + sizeof(int), received_bytes = 0;
-    received_bytes += readExact(read_stream, &f_size, sizeof(long));
-    received_bytes += readExact(read_stream, &name_len, sizeof(int));
-    char* name_buffer = malloc(name_len + 1);
-    // expected_bytes += name_len;
-    if (name_len > 0) {
-        printf("Taking %d bytes\n", name_len);
-        int name_r = readExact(read_stream, name_buffer, name_len);
-        if (name_r != name_len) {
-            printf("Namelen discrepancy :p [%d/%d]\n", name_r, name_len);
-            name_buffer[name_len] = '\0';
-            printf("s = \"%s\"",name_buffer);
-            exit(-2);
-        }
-        name_buffer[name_len] = '\0';
-        printf("Ack file %s\n", name_buffer);
-    }
-    if (expected_bytes != received_bytes) {
-        printf("WARNING: Receive discrepancy: [%d/%d]\n", received_bytes, expected_bytes);
-        exit(-1);
-    }
-    dest->fname = name_buffer;
-    dest->fname_len = name_len;
-    dest->file_size = f_size;
-}
-
-void sendHeader(int stream_fileno, trans_header* header)
-{
-    writeExact(stream_fileno, &header->file_count, sizeof(int));
-    known_file*current = header->files;
-    while (current != NULL) {
-        sendFileHeader(stream_fileno, current);
-        current = current->next;
-    }
-}
-
-trans_header* recHeader(int read_stream)
-{
-    trans_header* ret = malloc(sizeof(trans_header));
-    readExact(read_stream, &ret->file_count, sizeof(int));
-    known_file* first = gen_kfile();
-    known_file* cur = first;
-    for (int i = 0; i < ret->file_count; i++) {
-        recFileHeader(read_stream, cur);
-        known_file* next = gen_kfile();
-        next->next = NULL;
-        next->fname = NULL;
-        next->file_size = 0;
-        cur->next = next;
-        cur = next;
-    }
-    ret->files = first;
-    printHeader(ret);
-    return ret;
-}
-
-void sendDirectory(int stream_fileno)
-{
-    trans_header* header = malloc(sizeof(trans_header));
-    known_file* first = gen_kfile();
-    known_file* k_file = first;
-    first->file_size = 0; first->fname = NULL;
-
-    int n_files = 0.;
-    getAllFiles(NULL , k_file);
-    while (k_file != NULL) {
-        k_file = k_file->next;
-        n_files++;
-    }
-    header->file_count = n_files - 1;
-    header->files = first;
-
-    printHeader(header);
-    sendHeader(stream_fileno, header);
-
-    k_file = first;
-    while (k_file->next != NULL) {
-        sendFile(stream_fileno, k_file->fname, k_file->file_size);
-        k_file = k_file->next;
-    }
-}
-
-void recDirectory(int read_stream)
-{
-    trans_header* header = recHeader(read_stream);
-    known_file* act = header->files;
-    while (act->fname != NULL) {
-        receiveFile(read_stream, act->fname, act->file_size);
-        act = act->next;
-    }
-}
-
-void printHeader(trans_header* header)
-{
-    printf("Header: Files=%d\n", header->file_count);
-    known_file* cur = header->files;
-    int c = 0;
-    while (cur != NULL) {
-        printf("File[%d][%ld] %s[%ld]\n",++c,cur->file_size,cur->fname,cur->fname_len);
-        cur = cur->next;
-    }
-    printf("End header.\n");
-}
-
 #endif

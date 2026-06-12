@@ -3,17 +3,15 @@
 
 #include <stdlib.h>
 
-typedef struct trans_header trans_header;
-typedef struct known_file known_file;
+typedef struct file_info file_info;
 
 void sendFile(int stream_fileno, const char* file_path, long exp_bytes);
-void sendDirectory(int stream_fileno);
 
-void recDirectory(int read_stream);
+void receiveFile(int r_stream_fileno);
 
-void receiveFile(int r_stream_fileno, char* file_path, int bytes);
+void concatenatePath(char* dest, const char* dir, const char* filename);
 
-void printHeader(trans_header* header);
+int isDir(const char* fname);
 
 void ensureHasPath(char* file_path);
 
