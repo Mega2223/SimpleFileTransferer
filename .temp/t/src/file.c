@@ -1,4 +1,5 @@
-#ifndef FILE_C
+t(SIGINT);
+}#ifndef FILE_C
 #define FILE_C
 
 #include "file.h"
@@ -40,21 +41,27 @@ known_file* gen_kfile()
     return ret;
 }
 
+int READ_BLOCK = 0, WRITE_BLOCK = 0;
+
 ssize_t readExact(int fileno, void* buffer, size_t bytec)
 {
+    READ_BLOCK++;
     ssize_t rd = 0;
     while (rd < bytec) {
         rd += read(fileno, &buffer[rd], bytec-rd);
     }
+    READ_BLOCK--;
     return rd;
 }
 
 ssize_t writeExact(int fileno, const void* buffer, size_t bytec)
 {
+    WRITE_BLOCK++;
     ssize_t written = 0;
     while (written < bytec) {
         written += write(fileno, &buffer[written], bytec-written);
     }
+    WRITE_BLOCK--;
     return written;
 }
 
@@ -143,15 +150,13 @@ void receiveFile(int r_stream_fileno, char* file_path, int bytes)
     int fstream = open(file_path, O_WRONLY | O_TRUNC | O_CREAT);
     char rec_buffer[SEND_BUFFER_SIZE];
     printf("Receiving %s[%d]\n", file_path,bytes);
-    int recd_bytes = 0;
     while (bytes) {
-        bzero(rec_buffer, SEND_BUFFER_SIZE);
+        bzero(rec_buffer, sizeof(char));
         ssize_t n = readExact(r_stream_fileno, rec_buffer,
             bytes > SEND_BUFFER_SIZE ? SEND_BUFFER_SIZE : bytes);
         if (getNetworkDebug()){
-            printBytes(rec_buffer,SEND_BUFFER_SIZE,recd_bytes);
+            printBytes(rec_buffer,SEND_BUFFER_SIZE,n);
         }
-        recd_bytes += n;
         // printf("Reading \"%s\", [%d] bytes remaining.\n", file_path, bytes);
         // printf("Read [%d] bytes from a possible [%d].\n", n, bytes > SEND_BUFFER_SIZE ? SEND_BUFFER_SIZE : bytes);
         if (n <= 0) {
@@ -255,7 +260,7 @@ void printFileChain(known_file* first)
     printf("\n");
 }
 
-int sendFileHeader(int stream_fileno, known_file* k_file)
+void sendFileHeader(int stream_fileno, known_file* k_file)
 {
     int name_len = k_file->fname_len;
     int written = 0, expected = sizeof(long) + sizeof(int) + name_len;
@@ -266,10 +271,9 @@ int sendFileHeader(int stream_fileno, known_file* k_file)
         printf("WARNING: Sending discrepancy at %s: [%d/%d]\n", k_file->fname,written,expected);
         exit(-1);
     }
-    return written;
 }
 
-int recFileHeader(int read_stream, known_file* dest)
+void recFileHeader(int read_stream, known_file* dest)
 {
     long f_size;
     int name_len = 0, expected_bytes = sizeof(long) + sizeof(int), received_bytes = 0;
@@ -296,31 +300,26 @@ int recFileHeader(int read_stream, known_file* dest)
     dest->fname = name_buffer;
     dest->fname_len = name_len;
     dest->file_size = f_size;
-    return received_bytes;
 }
 
 void sendHeader(int stream_fileno, trans_header* header)
 {
-    int sent_bytes = 0;
-    sent_bytes += writeExact(stream_fileno, &header->file_count, sizeof(int));
+    writeExact(stream_fileno, &header->file_count, sizeof(int));
     known_file*current = header->files;
-    while (current != NULL && current->fname != NULL) {
-        sent_bytes += sendFileHeader(stream_fileno, current);
-        printf("SENDING HEADER \"%s\" :3\n",current->fname);
+    while (current != NULL) {
+        sendFileHeader(stream_fileno, current);
         current = current->next;
     }
-    printf("Sent %d bytes for header\n",sent_bytes);
 }
 
 trans_header* recHeader(int read_stream)
 {
-    int recv_bytes = 0;
     trans_header* ret = malloc(sizeof(trans_header));
-    recv_bytes += readExact(read_stream, &ret->file_count, sizeof(int));
+    readExact(read_stream, &ret->file_count, sizeof(int));
     known_file* first = gen_kfile();
     known_file* cur = first;
     for (int i = 0; i < ret->file_count; i++) {
-        recv_bytes += recFileHeader(read_stream, cur);
+        recFileHeader(read_stream, cur);
         known_file* next = gen_kfile();
         next->next = NULL;
         next->fname = NULL;
@@ -329,9 +328,7 @@ trans_header* recHeader(int read_stream)
         cur = next;
     }
     ret->files = first;
-    // recv_bytes += recFileHeader(read_stream,cur);
     printHeader(ret);
-    printf("Recv %d bytes for header\n",recv_bytes);
     return ret;
 }
 
@@ -380,7 +377,4 @@ void printHeader(trans_header* header)
         printf("File[%d][%ld] %s[%ld]\n",++c,cur->file_size,cur->fname,cur->fname_len);
         cur = cur->next;
     }
-    printf("End header.\n");
-}
-
-#endif
+    printf("End header.\n")

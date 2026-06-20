@@ -1,3 +1,7 @@
+;
+}
+
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
@@ -74,7 +78,7 @@ int main(int argc, char **argv) {
             }
             strcpy(fileName, argv[++a]);
         } else {
-            printf("Unknown argument: \"%s\"\n",argv[a]);
+            printf("Unknown argument: %s",argv[a]);
         }
     }
 
@@ -86,7 +90,7 @@ int main(int argc, char **argv) {
         }
         int chdir_r = chdir(fileName);
         if (chdir_r != 0) {
-            printf("Error setting directory %s as main directory, quitting.\n", fileName);
+            printf("Error opening %s, quitting.\n", fileName);
             return -1;
         }
         if (PIPE) {
@@ -132,5 +136,4 @@ int main(int argc, char **argv) {
 void onSigInt(int i)
 {
     INTERRUPTED = 1;
-    exit(SIGINT);
-}
+    exi
