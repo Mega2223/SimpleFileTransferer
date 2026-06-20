@@ -36,12 +36,19 @@ void sendFileInfo(int stream, const char* filename, int bytes){
 
 file_info* recFileInfo(int stream){
     file_info* ret = malloc(sizeof(file_info));
-    read(stream,&ret->bytes,sizeof(ret->bytes));
-    read(stream,&ret->namelen,sizeof(ret->namelen));
+     printf("ret\n");
+    read(stream,&(ret->bytes),sizeof(ret->bytes));
+     printf("ret\n");
+    read(stream,&(ret->namelen),sizeof(ret->namelen));
+     printf("ret\n");
     char* name = malloc(ret->namelen+1);
+     printf("ret\n");
     read(stream,name,ret->namelen);
+     printf("ret%d\n",ret->namelen);
     name[ret->namelen - 1] = '\0';
+     printf("ret\n");
     ret->name = name;
+     printf("ret\n");
     return ret;
 }
 
@@ -155,7 +162,6 @@ void sendFile(int stream_fileno, const char* file_path, long exp_bytes)
 void receiveFile(int r_stream_fileno)
 {
     file_info* rec = recFileInfo(r_stream_fileno);
-
     ensureHasPath(rec->name);
     int fstream = open(rec->name, O_WRONLY | O_TRUNC | O_CREAT);
     char rec_buffer[SEND_BUFFER_SIZE];

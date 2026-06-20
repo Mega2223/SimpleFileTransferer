@@ -80,11 +80,6 @@ int main(int argc, char **argv) {
         if (socket <= 0) {
             return -1;
         }
-        int chdir_r = chdir(fileName);
-        if (chdir_r != 0) {
-            printf("Error opening %s, quitting.\n", fileName);
-            return -1;
-        }
         if (PIPE) {
             char buffer[32];
             for (;;) {
@@ -106,12 +101,6 @@ int main(int argc, char **argv) {
         closeSock(socket);
     } else {
         ensureHasPath(fileName);
-        mkdir(fileName, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-        int chdir_r = chdir(fileName);
-        if (chdir_r != 0) {
-            printf("Error opening %s, quitting.\n", fileName);
-            return -1;
-        }
         int serverSocket = getSocketAsServer(SELF_PORT);
         if (PIPE) {
             int transSocket = listenAtSocket(serverSocket);
