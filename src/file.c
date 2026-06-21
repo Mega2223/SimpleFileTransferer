@@ -58,6 +58,20 @@ ssize_t writeExact(int fileno, const void* buffer, size_t bytec)
     return written;
 }
 
+int isFile(const char *path)
+{
+    struct stat pstat;
+    stat(path, &pstat);
+    return S_ISREG(pstat.st_mode);
+}
+
+int isDirectory(const char *path)
+{
+    struct stat pstat;
+    stat(path, &pstat);
+    return S_ISDIR(pstat.st_mode);
+}
+
 long fileSize(const char* file_name)
 {
     struct stat file_stat;

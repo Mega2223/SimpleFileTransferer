@@ -17,7 +17,7 @@
 // - Procurar por hosts disponiveis
 // - Escrita direta a partir do STDIN
 // - Leitura para o STDOUT
-// - Pensando alto: uma fila, caso o receptor não esteja online, guarde a requisição no chache
+// - Pensando alto: uma fila, caso o receptor não esteja online, guarde a requisição no cache
 // e mande quando ele esteja, pensando ainda mais alto, seria ideal isso ser um serviço
 
 unsigned int SELF_PORT = 2000;
@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
 
     bzero(fileName, sizeof(fileName));
   
-    for(int a = 0; a < argc; ++a){
+    for(int a = 1; a < argc; ++a){
         if(strcmp(argv[a],"--sender") == 0){
             SELF_TYPE = SENDER;
         }
@@ -79,14 +79,10 @@ int main(int argc, char **argv) {
     }
 
     if (SELF_TYPE == SENDER) {
+        // Sender
         printf("Sending \"%s\" to host %s:%d\n",fileName,DEST_ADDRESS,SELF_PORT);
         int socket = getSocketAsClient(DEST_ADDRESS, SELF_PORT);
         if (socket <= 0) {
-            return -1;
-        }
-        int chdir_r = chdir(fileName);
-        if (chdir_r != 0) {
-            printf("Error setting directory %s as main directory, quitting.\n", fileName);
             return -1;
         }
         if (PIPE) {
@@ -95,11 +91,21 @@ int main(int argc, char **argv) {
                 int n = read(STDIN_FILENO, buffer, 32);
                 write(socket, buffer, n);
             }
-        } else {
+        } else if (isDirectory(fileName)){
+            int chdir_r = chdir(fileName);
+            if (chdir_r != 0) {
+                printf("Error setting directory %s as main directory, quitting.\n", fileName);
+                return -1;
+            }
             sendDirectory(socket);
+        } else if (isFile(fileName)){
+            // TODO
+        } else {
+            printf("I don't know what \"%s\" is.\n",fileName);
         }
         closeSock(socket);
     } else {
+        // Receiver
         ensureHasPath(fileName);
         mkdir(fileName, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
         int chdir_r = chdir(fileName);
