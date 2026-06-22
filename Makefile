@@ -8,3 +8,7 @@ build:
 debug:
 	mkdir bin  >> /dev/null || true
 	gcc -Wall $w -g3 -o ./bin/debug.out
+
+install:
+	sudo install ./bin/main.out /bin/sft
+
